@@ -21,6 +21,7 @@ export enum ImmichHeader {
   SharedLinkSlug = 'x-immich-share-slug',
   Checksum = 'x-immich-checksum',
   Cid = 'x-immich-cid',
+  UploadSource = 'x-immich-upload-source',
 }
 
 export enum ImmichQuery {

@@ -17,6 +17,7 @@ import {
   AssetMediaOptionsDto,
   AssetMediaReplaceDto,
   AssetMediaSize,
+  AssetUploadSource,
   CheckExistingAssetsDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
@@ -47,7 +48,11 @@ export interface AssetMediaRedirectResponse {
 
 @Injectable()
 export class AssetMediaService extends BaseService {
-  async getUploadAssetIdByChecksum(auth: AuthDto, checksum?: string): Promise<AssetMediaResponseDto | undefined> {
+  async getUploadAssetIdByChecksum(
+    auth: AuthDto,
+    checksum?: string,
+    uploadSource?: AssetUploadSource,
+  ): Promise<AssetMediaResponseDto | undefined> {
     if (!checksum) {
       return;
     }
@@ -58,9 +63,11 @@ export class AssetMediaService extends BaseService {
       return { id: assetId, status: AssetMediaStatus.DUPLICATE };
     }
 
-    const isDeleted = await this.assetRepository.isChecksumDeleted(auth.user.id, checksumBuffer);
-    if (isDeleted) {
-      return { status: AssetMediaStatus.PREVIOUSLY_DELETED };
+    if (uploadSource !== AssetUploadSource.Manual) {
+      const isDeleted = await this.assetRepository.isChecksumDeleted(auth.user.id, checksumBuffer);
+      if (isDeleted) {
+        return { status: AssetMediaStatus.PREVIOUSLY_DELETED };
+      }
     }
 
     return;
@@ -304,9 +311,11 @@ export class AssetMediaService extends BaseService {
 
   async bulkUploadCheck(auth: AuthDto, dto: AssetBulkUploadCheckDto): Promise<AssetBulkUploadCheckResponseDto> {
     const checksums: Buffer[] = dto.assets.map((asset) => fromChecksum(asset.checksum));
+    const isManual = dto.uploadSource === AssetUploadSource.Manual;
+
     const [results, deletedChecksums] = await Promise.all([
       this.assetRepository.getByChecksums(auth.user.id, checksums),
-      this.assetRepository.getDeletedChecksums(auth.user.id, checksums),
+      isManual ? Promise.resolve([]) : this.assetRepository.getDeletedChecksums(auth.user.id, checksums),
     ]);
     const checksumMap: Record<string, { id: string; isTrashed: boolean }> = {};
     const deletedChecksumSet = new Set(deletedChecksums.map((c) => c.toString('hex')));

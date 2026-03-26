@@ -25,6 +25,11 @@ export class AssetMediaOptionsDto {
   edited?: boolean;
 }
 
+export enum AssetUploadSource {
+  Backup = 'backup',
+  Manual = 'manual',
+}
+
 export enum UploadFieldName {
   ASSET_DATA = 'assetData',
   SIDECAR_DATA = 'sidecarData',
@@ -65,6 +70,9 @@ class AssetMediaBase {
 }
 
 export class AssetMediaCreateDto extends AssetMediaBase {
+  @ValidateEnum({ enum: AssetUploadSource, name: 'AssetUploadSource', description: 'Upload source (backup = auto-sync, manual = user-initiated share)', optional: true })
+  uploadSource?: AssetUploadSource;
+
   @ValidateBoolean({ optional: true, description: 'Mark as favorite' })
   isFavorite?: boolean;
 
@@ -113,6 +121,9 @@ export class AssetBulkUploadCheckDto {
   @ValidateNested({ each: true })
   @Type(() => AssetBulkUploadCheckItem)
   assets!: AssetBulkUploadCheckItem[];
+
+  @ValidateEnum({ enum: AssetUploadSource, name: 'AssetUploadSource', description: 'Upload source (backup = auto-sync, manual = user-initiated share)', optional: true })
+  uploadSource?: AssetUploadSource;
 }
 
 export class CheckExistingAssetsDto {
