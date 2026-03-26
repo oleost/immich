@@ -19,6 +19,7 @@ import {
   AssetMediaSize,
   AssetUploadSource,
   CheckExistingAssetsDto,
+  DeviceDeletionsAcknowledgeDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
 import { AssetDownloadOriginalDto } from 'src/dtos/asset.dto';
@@ -295,6 +296,14 @@ export class AssetMediaService extends BaseService {
       contentType: mimeTypes.lookup(filepath),
       cacheControl: CacheControl.PrivateWithCache,
     });
+  }
+
+  async getPendingDeviceDeletions(auth: AuthDto, deviceId: string): Promise<string[]> {
+    return this.assetRepository.getPendingDeviceDeletions(auth.user.id, deviceId);
+  }
+
+  async acknowledgePendingDeviceDeletions(auth: AuthDto, dto: DeviceDeletionsAcknowledgeDto): Promise<void> {
+    await this.assetRepository.acknowledgePendingDeviceDeletions(auth.user.id, dto.deviceId, dto.deviceAssetIds);
   }
 
   async checkExistingAssets(

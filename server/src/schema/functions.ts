@@ -116,8 +116,8 @@ export const asset_delete_audit = registerFunction({
       SELECT "id", "ownerId"
       FROM OLD;
 
-      INSERT INTO asset_deleted_hash ("ownerId", "checksum")
-      SELECT "ownerId", "checksum"
+      INSERT INTO asset_deleted_hash ("ownerId", "checksum", "deviceAssetId", "deviceId")
+      SELECT "ownerId", "checksum", NULLIF("deviceAssetId", ''), NULLIF("deviceId", '')
       FROM OLD
       WHERE "libraryId" IS NULL
       ON CONFLICT ("ownerId", "checksum") DO NOTHING;

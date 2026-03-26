@@ -1,16 +1,19 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/album/album.provider.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/scroll_notifier.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/pending_device_deletions.provider.dart';
 import 'package:immich_mobile/providers/multiselect.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/widgets/asset_grid/deleted_from_immich_dialog.dart';
 
 @RoutePage()
 class TabControllerPage extends HookConsumerWidget {
@@ -20,6 +23,21 @@ class TabControllerPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isRefreshingAssets = ref.watch(assetProvider);
     final isRefreshingRemoteAlbums = ref.watch(isRefreshingRemoteAlbumProvider);
+
+    // Show a batched dialog when photos deleted from Immich (e.g. on PC) are
+    // still present in the local library. Uses a flag to show it only once
+    // per session even if the provider state is re-emitted.
+    final dialogShown = useRef(false);
+    ref.listen(pendingDeviceDeletionsNotifierProvider, (_, pending) {
+      if (pending.isEmpty || dialogShown.value) return;
+      dialogShown.value = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (_) => DeletedFromImmichDialog(deviceAssetIds: pending),
+        );
+      });
+    });
     final isScreenLandscape = MediaQuery.orientationOf(context) == Orientation.landscape;
 
     Widget buildIcon({required Widget icon, required bool isProcessing}) {

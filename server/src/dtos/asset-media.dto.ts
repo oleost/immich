@@ -126,6 +126,19 @@ export class AssetBulkUploadCheckDto {
   uploadSource?: AssetUploadSource;
 }
 
+export class DeviceDeletionsAcknowledgeDto {
+  @ApiProperty({ description: 'Device ID' })
+  @IsNotEmpty()
+  @IsString()
+  deviceId!: string;
+
+  @ApiProperty({ description: 'Device asset IDs to acknowledge' })
+  @IsArray()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  deviceAssetIds!: string[];
+}
+
 export class CheckExistingAssetsDto {
   @ApiProperty({ description: 'Device asset IDs to check' })
   @ArrayNotEmpty()

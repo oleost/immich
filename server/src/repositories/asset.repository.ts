@@ -658,6 +658,30 @@ export class AssetRepository {
     return !!result;
   }
 
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING] })
+  async getPendingDeviceDeletions(ownerId: string, deviceId: string): Promise<string[]> {
+    const results = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('deviceAssetId')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('deviceId', '=', deviceId)
+      .where('acknowledgedByDeviceAt', 'is', null)
+      .where('deviceAssetId', 'is not', null)
+      .execute();
+    return results.map((r) => r.deviceAssetId!);
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING, [DummyValue.STRING]] })
+  async acknowledgePendingDeviceDeletions(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<void> {
+    await this.db
+      .updateTable('asset_deleted_hash')
+      .set({ acknowledgedByDeviceAt: new Date() })
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('deviceId', '=', deviceId)
+      .where('deviceAssetId', 'in', deviceAssetIds)
+      .execute();
+  }
+
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.BUFFER] })
   async getUploadAssetIdByChecksum(ownerId: string, checksum: Buffer): Promise<string | undefined> {
     const asset = await this.db

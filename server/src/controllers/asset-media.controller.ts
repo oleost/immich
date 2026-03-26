@@ -31,6 +31,7 @@ import {
   AssetMediaReplaceDto,
   AssetMediaSize,
   CheckExistingAssetsDto,
+  DeviceDeletionsAcknowledgeDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
 import { AssetDownloadOriginalDto } from 'src/dtos/asset.dto';
@@ -215,6 +216,30 @@ export class AssetMediaController {
     @Body() dto: CheckExistingAssetsDto,
   ): Promise<CheckExistingAssetsResponseDto> {
     return this.service.checkExistingAssets(auth, dto);
+  }
+
+  @Get('deleted-from-device')
+  @Authenticated({ permission: Permission.AssetUpload })
+  @Endpoint({
+    summary: 'Get pending device deletions',
+    description:
+      'Returns device asset IDs that have been permanently deleted from Immich but not yet acknowledged by the device. Used by the mobile app at startup to prompt the user to also delete from their local library.',
+    history: new HistoryBuilder().added('v1').beta('v1'),
+  })
+  getPendingDeviceDeletions(@Auth() auth: AuthDto, @Query('deviceId') deviceId: string): Promise<string[]> {
+    return this.service.getPendingDeviceDeletions(auth, deviceId);
+  }
+
+  @Post('deleted-from-device/acknowledge')
+  @Authenticated({ permission: Permission.AssetUpload })
+  @Endpoint({
+    summary: 'Acknowledge pending device deletions',
+    description: 'Marks device asset IDs as acknowledged so they are not returned again by the pending deletions endpoint.',
+    history: new HistoryBuilder().added('v1').beta('v1'),
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  acknowledgePendingDeviceDeletions(@Auth() auth: AuthDto, @Body() dto: DeviceDeletionsAcknowledgeDto): Promise<void> {
+    return this.service.acknowledgePendingDeviceDeletions(auth, dto);
   }
 
   @Post('bulk-upload-check')
