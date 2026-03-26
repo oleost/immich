@@ -20,6 +20,7 @@ import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/memory.provider.dart';
 import 'package:immich_mobile/providers/notification_permission.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/pending_device_deletions.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/providers/websocket.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
@@ -170,6 +171,15 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       if (isAlbumLinkedSyncEnable) {
         await _safeRun(backgroundManager.syncLinkedAlbum(), "syncLinkedAlbum");
       }
+
+      // Check if any photos deleted from Immich (e.g. on PC) still exist on
+      // this device. If so, the PendingDeviceDeletionsNotifier will hold their
+      // IDs and TabControllerPage will show a batched dialog prompting the user
+      // to remove them from the local library as well.
+      await _safeRun(
+        _ref.read(pendingDeviceDeletionsNotifierProvider.notifier).checkForPendingDeletions(),
+        "checkPendingDeviceDeletions",
+      );
     } catch (e, stackTrace) {
       _log.severe("Error during background sync", e, stackTrace);
     }

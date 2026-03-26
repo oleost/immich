@@ -635,6 +635,53 @@ export class AssetRepository {
       .execute();
   }
 
+  @GenerateSql({ params: [DummyValue.UUID, [DummyValue.BUFFER]] })
+  async getDeletedChecksums(ownerId: string, checksums: Buffer[]): Promise<Buffer[]> {
+    const results = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('checksum')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('checksum', 'in', checksums)
+      .execute();
+    return results.map((r) => r.checksum);
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.BUFFER] })
+  async isChecksumDeleted(ownerId: string, checksum: Buffer): Promise<boolean> {
+    const result = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('id')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('checksum', '=', checksum)
+      .limit(1)
+      .executeTakeFirst();
+    return !!result;
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING] })
+  async getPendingDeviceDeletions(ownerId: string, deviceId: string): Promise<string[]> {
+    const results = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('deviceAssetId')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('deviceId', '=', deviceId)
+      .where('acknowledgedByDeviceAt', 'is', null)
+      .where('deviceAssetId', 'is not', null)
+      .execute();
+    return results.map((r) => r.deviceAssetId!);
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING, [DummyValue.STRING]] })
+  async acknowledgePendingDeviceDeletions(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<void> {
+    await this.db
+      .updateTable('asset_deleted_hash')
+      .set({ acknowledgedByDeviceAt: new Date() })
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('deviceId', '=', deviceId)
+      .where('deviceAssetId', 'in', deviceAssetIds)
+      .execute();
+  }
+
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.BUFFER] })
   async getUploadAssetIdByChecksum(ownerId: string, checksum: Buffer): Promise<string | undefined> {
     const asset = await this.db
