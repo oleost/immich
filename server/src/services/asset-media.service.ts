@@ -52,12 +52,18 @@ export class AssetMediaService extends BaseService {
       return;
     }
 
-    const assetId = await this.assetRepository.getUploadAssetIdByChecksum(auth.user.id, fromChecksum(checksum));
-    if (!assetId) {
-      return;
+    const checksumBuffer = fromChecksum(checksum);
+    const assetId = await this.assetRepository.getUploadAssetIdByChecksum(auth.user.id, checksumBuffer);
+    if (assetId) {
+      return { id: assetId, status: AssetMediaStatus.DUPLICATE };
     }
 
-    return { id: assetId, status: AssetMediaStatus.DUPLICATE };
+    const isDeleted = await this.assetRepository.isChecksumDeleted(auth.user.id, checksumBuffer);
+    if (isDeleted) {
+      return { status: AssetMediaStatus.PREVIOUSLY_DELETED };
+    }
+
+    return;
   }
 
   canUploadFile({ auth, fieldName, file, body }: UploadRequest): true {
@@ -298,8 +304,12 @@ export class AssetMediaService extends BaseService {
 
   async bulkUploadCheck(auth: AuthDto, dto: AssetBulkUploadCheckDto): Promise<AssetBulkUploadCheckResponseDto> {
     const checksums: Buffer[] = dto.assets.map((asset) => fromChecksum(asset.checksum));
-    const results = await this.assetRepository.getByChecksums(auth.user.id, checksums);
+    const [results, deletedChecksums] = await Promise.all([
+      this.assetRepository.getByChecksums(auth.user.id, checksums),
+      this.assetRepository.getDeletedChecksums(auth.user.id, checksums),
+    ]);
     const checksumMap: Record<string, { id: string; isTrashed: boolean }> = {};
+    const deletedChecksumSet = new Set(deletedChecksums.map((c) => c.toString('hex')));
 
     for (const { id, deletedAt, checksum } of results) {
       checksumMap[checksum.toString('hex')] = { id, isTrashed: !!deletedAt };
@@ -307,7 +317,8 @@ export class AssetMediaService extends BaseService {
 
     return {
       results: dto.assets.map(({ id, checksum }) => {
-        const duplicate = checksumMap[fromChecksum(checksum).toString('hex')];
+        const checksumHex = fromChecksum(checksum).toString('hex');
+        const duplicate = checksumMap[checksumHex];
         if (duplicate) {
           return {
             id,
@@ -315,6 +326,15 @@ export class AssetMediaService extends BaseService {
             reason: AssetRejectReason.DUPLICATE,
             assetId: duplicate.id,
             isTrashed: duplicate.isTrashed,
+          };
+        }
+
+        if (deletedChecksumSet.has(checksumHex)) {
+          return {
+            id,
+            action: AssetUploadAction.REJECT,
+            reason: AssetRejectReason.PREVIOUSLY_DELETED,
+            isDeleted: true,
           };
         }
 

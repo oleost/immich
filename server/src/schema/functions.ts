@@ -115,6 +115,13 @@ export const asset_delete_audit = registerFunction({
       INSERT INTO asset_audit ("assetId", "ownerId")
       SELECT "id", "ownerId"
       FROM OLD;
+
+      INSERT INTO asset_deleted_hash ("ownerId", "checksum")
+      SELECT "ownerId", "checksum"
+      FROM OLD
+      WHERE "libraryId" IS NULL
+      ON CONFLICT ("ownerId", "checksum") DO NOTHING;
+
       RETURN NULL;
     END`,
 });

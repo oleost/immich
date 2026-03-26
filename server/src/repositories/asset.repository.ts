@@ -635,6 +635,29 @@ export class AssetRepository {
       .execute();
   }
 
+  @GenerateSql({ params: [DummyValue.UUID, [DummyValue.BUFFER]] })
+  async getDeletedChecksums(ownerId: string, checksums: Buffer[]): Promise<Buffer[]> {
+    const results = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('checksum')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('checksum', 'in', checksums)
+      .execute();
+    return results.map((r) => r.checksum);
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.BUFFER] })
+  async isChecksumDeleted(ownerId: string, checksum: Buffer): Promise<boolean> {
+    const result = await this.db
+      .selectFrom('asset_deleted_hash')
+      .select('id')
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('checksum', '=', checksum)
+      .limit(1)
+      .executeTakeFirst();
+    return !!result;
+  }
+
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.BUFFER] })
   async getUploadAssetIdByChecksum(ownerId: string, checksum: Buffer): Promise<string | undefined> {
     const asset = await this.db

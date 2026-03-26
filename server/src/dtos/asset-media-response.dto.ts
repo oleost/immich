@@ -5,12 +5,13 @@ export enum AssetMediaStatus {
   CREATED = 'created',
   REPLACED = 'replaced',
   DUPLICATE = 'duplicate',
+  PREVIOUSLY_DELETED = 'previously-deleted',
 }
 export class AssetMediaResponseDto {
   @ValidateEnum({ enum: AssetMediaStatus, name: 'AssetMediaStatus', description: 'Upload status' })
   status!: AssetMediaStatus;
-  @ApiProperty({ description: 'Asset media ID' })
-  id!: string;
+  @ApiPropertyOptional({ description: 'Asset media ID' })
+  id?: string;
 }
 
 export enum AssetUploadAction {
@@ -21,6 +22,7 @@ export enum AssetUploadAction {
 export enum AssetRejectReason {
   DUPLICATE = 'duplicate',
   UNSUPPORTED_FORMAT = 'unsupported-format',
+  PREVIOUSLY_DELETED = 'previously-deleted',
 }
 
 export class AssetBulkUploadCheckResult {
@@ -34,6 +36,8 @@ export class AssetBulkUploadCheckResult {
   assetId?: string;
   @ApiPropertyOptional({ description: 'Whether existing asset is trashed' })
   isTrashed?: boolean;
+  @ApiPropertyOptional({ description: 'Whether this asset was previously deleted' })
+  isDeleted?: boolean;
 }
 
 export class AssetBulkUploadCheckResponseDto {
